@@ -4,10 +4,16 @@
 raku -e 'use lib "lib"; use SequenceHelper; say ver()';
 
 # Verify factorial operator
+raku -e 'use lib "lib"; use SequenceHelper; say factorial(42)';
+
+# Verify factorial sub
 raku -e 'use lib "lib"; use SequenceHelper; say 42!';
 
 # Verify double factorial operator
 raku -e 'use lib "lib"; use SequenceHelper; say 5!!';
+
+# Verify double factorial sub
+#raku -e 'use lib "lib"; use SequenceHelper; say doubleFactorial(5)';
 
 # Generate a sequence using genSeq_IndexOps
 raku -e 'use lib "lib"; use SequenceHelper; say genSeq_IndexOps(5, -> $x {3**$x + 5**$x + 6**$x})';

@@ -2,8 +2,12 @@
 
 use v6;
 use Test;
+use lib "%*ENV<HOME>/Documents/myRaku/gitHub/SequenceHelper/lib";
 use SequenceHelper;
 
-plan 1;
-is 5!!, 15;  #Bogus postfix
+plan 3;
+
+is 0!!, 1,   '0!! = 1';
+is 5!!, 15,  '5!! = 15';
+is 15!!, 2027025, '15!! = 2027025';
 
