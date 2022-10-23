@@ -3,7 +3,7 @@ use v6.d;
 module SequenceHelper {
 
   sub verSequenceHelper() is export {
-    return "v0.0.2";
+    return "v0.0.3";
   }
 
   #|Define the Golden Ration: phi
@@ -14,12 +14,12 @@ module SequenceHelper {
   #|Define a factorial operator: '!'
   sub postfix:<!>(Int $n) is export {
     when $n == 0|1 {return 1}
-    default {$n * ($n - 1)!}
+    default {return $n * ($n - 1)!}
   }
 
   #|Define a double factorial operator: '!!'
   sub postfix:<!!>($n) is export {
-    when $n == 0 | 1 {return 1}
+    when $n == -1|0|1 {return 1}
     default {return $n*($n-2)!!}
   }
 
@@ -37,36 +37,38 @@ module SequenceHelper {
       Invoker must supply the function, f, to be executed in each
       iteration.
   )
-  multi sub genSeq_IndexOps($limit, $f) is export {
-    my @a = ();
-    for (0...^$limit) -> $n {
-      @a.push($f($n));
-    }
-    return @a;
-  }
 
-  #|( Generate sequences from operations on the loop index variable
-      Invoker must supply the function, f, to be executed in each
-      iteration and an input list for the loop index variable
-      to use.
+  #|( Generate sequences that can be built from computations
+      involving computations on the value of the index variable and/or
+      previous values in the sequence. Invoker must supply the function,
+      f, to be applied in each iteration and a list of seed values.
   )
-  multi sub genSeq_IndexOps($limit, $f, @in) is export {
-    my @a = ();
-    for (0...^$limit) -> $n {
-      @a.push($f($n, @in));
+  sub arrayOps (Int $limit, $f, :@seeds, :@refList, Int :$nBase = 0, Int :$shiftAway = 0, Bool :$passThru = True) is export {
+    my @a = (@seeds // ());
+    my $nStart = @seeds.elems + $nBase;
+    my $nLast = $limit + $nBase + $shiftAway;
+    for ($nStart...^$nLast) -> $n {
+      if (@refList // False) {
+        if ($passThru) {
+          @a.push($f($n, @a, @refList));
+        }
+        else {
+          @a.push($f($n, @refList));
+        }
+      }
+      else {
+        if ($passThru) {
+          @a.push($f($n, @a));
+        }
+        else {
+          @a.push($f($n));
+        }
+      }
     }
-    return @a;
-  }
-
-  #|( Generate sequences that can be built from operations on previous
-     values in the sequence. Invoker must supply the function, f, to
-     be applied in each iteration and a list of seed values.
-  )
-  sub genSeq_ArrayOps (Int $limit, $f, @seeds) is export {
-    my @a = @seeds;
-    my $i = @seeds.elems;
-    for ($i...^$limit) -> $n {
-      @a.push($f($n, @a));
+    if ($shiftAway) {
+      for (0..^$shiftAway) {
+        @a.shift;
+      }
     }
     return @a;
   }
@@ -75,7 +77,49 @@ module SequenceHelper {
      criterion; such as being prime. Invoker must supply the function
      that defines that criterion.
   )
-  sub genSeq_NumSuchThat($limit, $f) is export {
+  multi sub genSeq_NumSuchThat($limit, $f) is export {
     return (0, 1 ...*).grep({$f($^x)})[^$limit];
   }
+
+  #|( Generate sequences based on finding numbers meet a user specified
+     criterion; such as being prime. Invoker must supply the function
+     that defines that criterion and, in this version, a reference list
+     the function will access.
+  )
+  multi sub genSeq_NumSuchThat($limit, $f, @refList) is export {
+    return (0, 1 ...*).grep({$f($^n, @refList)})[^$limit];
+  }
+
+  sub loopFunctions($limit, $f_inLoop, $f_afterLoop, Int :$shiftAway = 0, Bool :$toN = False, :@seeds) is export {
+    my @a = @seeds // ();
+    my $nStart = @a.elems;
+    my $nLast = $shiftAway ?? $limit + $nStart !! $limit;
+    my @temp = ();
+
+    for ($nStart...^$nLast) -> $n {
+
+      if ($toN) {
+        @temp = ();
+        for (0...(@a.elems)) -> $k {
+          @temp.push($f_inLoop($n, $k, @a));
+        }
+        $f_afterLoop(@a, @temp);
+        @temp = ();
+      }
+      else {
+        for (0...^(@a.elems)) -> $k {
+          @temp.push($f_inLoop($n, $k, @a));
+        }
+        $f_afterLoop(@a, @temp);
+        @temp = ();
+      }
+    }
+    if ($shiftAway) {
+      for (0..^$shiftAway) {
+        @a.shift;
+      }
+    }
+    return @a;
+  }
+
 }
